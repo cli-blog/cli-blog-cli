@@ -1,0 +1,72 @@
+{
+  "name": "@cli-blog/cli",
+  "version": "0.1.0",
+  "description": "Official Cli Blog command-line tool for publishing, automation, and offline demos.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/cli-blog/cli-blog-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cli-blog/cli-blog-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cli-blog/cli-blog-cli/issues"
+  },
+  "keywords": [
+    "cli-blog",
+    "blog",
+    "blogging",
+    "cms",
+    "content-api",
+    "publishing",
+    "markdown",
+    "cli",
+    "command-line",
+    "developer-tools",
+    "automation",
+    "ci",
+    "smoke-test",
+    "demo-content",
+    "ai-agents"
+  ],
+  "author": "Cli Blog",
+  "bin": {
+    "cli-blog": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tgz",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run typecheck && bun run test && bun run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test test",
+    "pack:dry": "bun run build && bun pm pack --dry-run"
+  },
+  "dependencies": {
+    "@cli-blog/node": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.27",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
