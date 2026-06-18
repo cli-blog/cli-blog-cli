@@ -1,61 +1,71 @@
+<p align="center">
+  <a href="https://cli-blog.com">
+    <img src="https://cli-blog.com/cli-blog-logo.png" alt="Cli Blog" width="72" height="72" />
+  </a>
+</p>
+
 # @cli-blog/cli
 
 Official command-line tool for the Cli Blog API.
 
-Repository: [github.com/cli-blog/cli-blog-cli](https://github.com/cli-blog/cli-blog-cli)
+[Homepage](https://cli-blog.com) · [Documentation](https://cli-blog.com/docs) · [CLI Docs](https://cli-blog.com/docs/cli) · [API Reference](https://cli-blog.com/docs/reference/endpoints) · [GitHub](https://github.com/cli-blog/cli-blog-cli)
 
 ## What Is This?
 
 `@cli-blog/cli` lets developers, teams, CI jobs, and AI agents publish and manage Cli Blog content from a terminal. It wraps the public `/v1` content API with commands for posts, authors, media, categories, tags, locales, sitemap XML, feed XML, revisions, and slug redirects.
 
-The CLI is built for trusted automation:
+The package name is `@cli-blog/cli`, but the installed command is `cli-blog`:
 
-- Works with public keys for published-content reads.
-- Works with private keys for server, CI, agent, and editorial writes.
-- Prints JSON with `--json` for scripts.
-- Stores saved config with current-user-only file permissions.
-- Includes offline demo mode so users can try commands before creating an account or API key.
+```sh
+npm install -g @cli-blog/cli
+cli-blog posts list --demo --json
+```
 
-## Getting Started
-
-Try the CLI without setup:
+You can also run it without a global install:
 
 ```sh
 npx @cli-blog/cli posts list --demo --json
-npx @cli-blog/cli posts create --demo --title "Hello from demo mode"
+```
+
+## Getting Started
+
+Try the CLI without setup. Demo mode is fully offline and uses San Francisco sample content:
+
+```sh
+npx @cli-blog/cli posts list --demo --json
+npx @cli-blog/cli posts create --demo --title "A developer's guide to San Francisco"
 npx @cli-blog/cli feed get --demo
 ```
 
-Install it globally:
+Install it globally when you want the `cli-blog` command available everywhere:
 
 ```sh
 npm install -g @cli-blog/cli
 ```
 
-Configure a real private API key for publishing:
+Configure a private API key for trusted publishing:
 
 ```sh
 cli-blog config set --api-key "$CLI_BLOG_PRIVATE_KEY"
 ```
 
-Or use environment variables, which are recommended for CI and shared shells:
+Environment variables override saved config and are recommended for CI:
 
 ```sh
 CLI_BLOG_API_KEY=cli_blog_sk_...
-CLI_BLOG_API_URL=https://api.cli-blog.com
 ```
 
 Configuration precedence is:
 
-1. `--api-key` and `--api-url` flags.
-2. `CLI_BLOG_API_KEY` and `CLI_BLOG_API_URL`.
+1. `--api-key`.
+2. `CLI_BLOG_API_KEY`.
 3. Saved config from `cli-blog config set`.
 
 Prefer environment variables or a secret manager for private keys. Avoid passing private keys through `--api-key` because shell history and local process inspection may expose command arguments.
 
 ## Demo Mode
 
-Demo mode returns deterministic sample content without config, API keys, network requests, file reads, uploads, writes, or destructive prompts.
+Demo mode returns deterministic San Francisco sample content without config, API keys, network requests, file reads, uploads, writes, or destructive prompts.
 
 Use either flag:
 
@@ -67,11 +77,13 @@ cli-blog posts list --demo-content
 Demo mode works across the public command surface:
 
 ```sh
-cli-blog posts create --demo --title "Launch notes" --body "# Shipped"
-cli-blog authors create --demo --public-name "Ada Lovelace"
-cli-blog media upload --demo --file ./cover.png --alt-text "Cover image"
-cli-blog categories create --demo --name "Product Updates"
-cli-blog tags create --demo --name "release"
+cli-blog posts create --demo --title "A developer's guide to San Francisco"
+cli-blog authors create --demo --public-name "Maya Chen"
+cli-blog media upload --demo --file ./bay-walk.png --alt-text "Morning light over San Francisco Bay"
+cli-blog categories create --demo --name "San Francisco"
+cli-blog tags create --demo --name "city-notes"
+cli-blog posts revisions list demo_post_sf_guide --demo --json
+cli-blog posts redirects get old-san-francisco-guide --demo --json
 cli-blog sitemap get --demo
 cli-blog feed get --demo
 ```
@@ -83,7 +95,6 @@ Global options:
 | Option | Description |
 | --- | --- |
 | `--api-key <key>` | API key override. Prefer `CLI_BLOG_API_KEY` for private keys. |
-| `--api-url <url>` | API base URL. Defaults to `https://api.cli-blog.com`. |
 | `--demo` | Return offline demo content without setup. |
 | `--demo-content` | Alias for `--demo`. |
 | `--json` | Print formatted JSON. |
@@ -95,7 +106,7 @@ Commands:
 
 | Command | Purpose |
 | --- | --- |
-| `config set --api-key <key> [--api-url <url>]` | Save local CLI configuration. |
+| `config set --api-key <key>` | Save local CLI configuration. |
 | `posts list [options]` | List posts with filters, field groups, and includes. |
 | `posts get <id-or-slug> [options]` | Fetch one post by ID or locale-scoped slug. |
 | `posts create [options]` | Create a post. |
@@ -134,40 +145,21 @@ Common post options:
 --include authors,categories,tags,media,translations
 ```
 
-SEO options for posts, categories, and tags:
-
-```sh
---seo-title <text>
---seo-description <text>
---canonical-url <url>
---focus-keyphrase <text>
---seo-keywords <word,word>
---robots-index=true|false
---robots-follow=true|false
---open-graph-title <text>
---open-graph-description <text>
---open-graph-media-asset-id <id>
---twitter-title <text>
---twitter-description <text>
---twitter-media-asset-id <id>
---schema-type <type>
-```
-
 ## Examples
 
 Create an author, category, tag, and post:
 
 ```sh
-cli-blog authors create --public-name "Ada Lovelace" --bio "Notes from the engine room" --json
-cli-blog categories create --name "Product Updates" --locale en-US --json
-cli-blog tags create --name "release" --locale en-US --json
+cli-blog authors create --public-name "Maya Chen" --bio "Field notes from San Francisco" --json
+cli-blog categories create --name "San Francisco" --locale en-US --json
+cli-blog tags create --name "city-notes" --locale en-US --json
 cli-blog posts create \
-  --title "First post" \
+  --title "A developer's guide to San Francisco" \
   --body-markdown ./post.md \
   --author-ids author_123 \
   --category-ids term_category_123 \
   --tag-ids term_tag_123 \
-  --seo-title "First post" \
+  --seo-title "A developer's guide to San Francisco" \
   --json
 ```
 
@@ -175,47 +167,8 @@ Review and publish with optimistic concurrency:
 
 ```sh
 cli-blog posts get post_123 --fields summary,content,seo --include authors,categories,tags --json
-cli-blog posts update post_123 --expected-version 2 --excerpt "A concise summary"
+cli-blog posts update post_123 --expected-version 2 --excerpt "Fog, hills, neighborhoods, and builder rituals."
 cli-blog posts publish post_123 --expected-version 3
-```
-
-Schedule a post:
-
-```sh
-cli-blog posts schedule post_123 --scheduled-at 2026-06-18T16:00:00.000Z
-```
-
-Read published delivery content with a public key:
-
-```sh
-CLI_BLOG_API_KEY=cli_blog_pk_... cli-blog posts list \
-  --status published \
-  --fields summary,seo \
-  --include authors,media \
-  --json
-```
-
-Upload and update media:
-
-```sh
-cli-blog media upload ./cover.png --alt-text "Product screenshot" --caption "Launch dashboard" --json
-cli-blog media update media_123 --alt-text "Updated product screenshot"
-```
-
-Work with localized taxonomy:
-
-```sh
-cli-blog locales list --json
-cli-blog categories create --name "Noticias" --locale es-MX --slug noticias
-cli-blog tags list --locale es-MX --include translations --json
-```
-
-Inspect revisions and redirects:
-
-```sh
-cli-blog posts revisions list post_123 --json
-cli-blog posts revisions get post_123 rev_123 --json
-cli-blog posts redirects get old-launch-notes --locale en-US --json
 ```
 
 Fetch XML helpers:
@@ -225,12 +178,38 @@ cli-blog sitemap get --locale en-US > sitemap.xml
 cli-blog feed get --locale en-US > feed.xml
 ```
 
-Use JSON output in automation:
+## Errors
+
+Failed commands print a single `cli-blog:` message to stderr and exit with code `1`. Successful commands exit `0`.
+
+Common cases:
+
+| Error | When to expect it | What to do |
+| --- | --- | --- |
+| `Missing API key` | You ran a real API command without config or `CLI_BLOG_API_KEY`. | Run `cli-blog config set --api-key <key>` or set `CLI_BLOG_API_KEY`. |
+| `Unknown command` | The command family or action is not supported. | Run `cli-blog --help` and check the command spelling. |
+| `Missing resource ID or slug` | A command such as `posts get`, `posts update`, or `authors delete` needs an ID/slug. | Pass the resource ID or slug after the action. |
+| `Invalid --expected-version number` | A numeric flag received non-numeric input. | Pass a valid number. |
+| API `401` / `403` | The key is missing, invalid, public-only, or missing permission for the action. | Use the right organization key type and scope. |
+| API `404` | The resource ID or locale-scoped slug was not found. | Check the ID, slug, and `--locale`. |
+| API `409` | The `--expected-version` value is stale. | Fetch the latest post, then retry with the current version. |
+
+Use `--json` when you want successful output to be machine-readable. Errors intentionally stay on stderr.
+
+## Publishing A New Version
+
+This repository publishes to npm from GitHub releases after `NPM_TOKEN` is configured in repository Actions secrets.
+
+For a CLI-only patch:
 
 ```sh
-post_id="$(cli-blog posts create --title "CI release notes" --body "# Release" --json | jq -r .id)"
-cli-blog posts publish "$post_id" --json
+npm version patch
+git push origin main --follow-tags
 ```
+
+Then create a GitHub release for the new tag, such as `v0.1.1`. The publish workflow verifies that the release tag matches `package.json`, runs typecheck/tests/build, and publishes with npm provenance.
+
+If the CLI depends on a new `@cli-blog/node` version, publish `@cli-blog/node` first, then update this package's dependency and publish the CLI.
 
 ## Security
 

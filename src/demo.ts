@@ -4,6 +4,7 @@ import { flagArray, flagString, type ParsedArgs } from "./args.js";
 
 const now = "2026-06-17T12:00:00.000Z";
 const organizationId = "org_demo";
+const demoSite = "https://example.com/san-francisco-notes";
 
 const numberFlag = (args: ParsedArgs, key: string, fallback: number) => {
   const value = flagString(args.flags, key);
@@ -19,9 +20,11 @@ const localeFor = (args: ParsedArgs) => flagString(args.flags, "locale") ?? "en-
 
 const bodyFor = (args: ParsedArgs) => {
   const body = flagString(args.flags, "body_markdown") ?? flagString(args.flags, "body");
-  if (!body) return "## Launch-ready publishing\n\nThis demo post was generated locally by the Cli Blog CLI.";
+  if (!body) {
+    return "## Fog, hills, and neighborhoods\n\nSan Francisco is full of small details worth publishing: a quiet morning near the Ferry Building, a late coffee in the Mission, and the view of the bay when the fog finally opens.";
+  }
   if (body.endsWith(".md") || body.includes("/")) {
-    return `## Demo body\n\nThe real CLI would read ${body}. Demo mode stays offline and uses sample Markdown instead.`;
+    return `## San Francisco demo body\n\nThe real CLI would read ${body}. Demo mode stays offline and uses sample Markdown about San Francisco instead.`;
   }
   return body;
 };
@@ -34,15 +37,15 @@ const list = <T>(data: T[], args: ParsedArgs) => ({
 });
 
 const author = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => ({
-  id: "demo_author_ada",
+  id: "demo_author_maya",
   object: "author",
   organization_id: organizationId,
-  public_name: flagString(args.flags, "public_name") ?? flagString(args.flags, "name") ?? "Ada Lovelace",
-  slug: flagString(args.flags, "slug") ?? "ada-lovelace",
-  bio: flagString(args.flags, "bio") ?? "Writes clear launch notes for developer tools.",
-  avatar_media_id: flagString(args.flags, "avatar_media_id") ?? "demo_media_avatar",
-  avatar_url: "https://cdn.cli-blog.example/demo/ada.png",
-  website_url: flagString(args.flags, "website_url") ?? "https://example.com/ada",
+  public_name: flagString(args.flags, "public_name") ?? flagString(args.flags, "name") ?? "Maya Chen",
+  slug: flagString(args.flags, "slug") ?? "maya-chen",
+  bio: flagString(args.flags, "bio") ?? "Writes field notes about San Francisco neighborhoods, food, parks, and builder culture.",
+  avatar_media_id: flagString(args.flags, "avatar_media_id") ?? "demo_media_maya",
+  avatar_url: "https://cdn.cli-blog.example/demo/san-francisco/maya.png",
+  website_url: flagString(args.flags, "website_url") ?? `${demoSite}/authors/maya-chen`,
   metadata: {},
   created_at: now,
   updated_at: now,
@@ -50,13 +53,13 @@ const author = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => ({
 });
 
 const media = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => ({
-  id: "demo_media_cover",
+  id: "demo_media_bay_walk",
   object: "media_asset",
   organization_id: organizationId,
-  url: "https://cdn.cli-blog.example/demo/cover.png",
-  original_filename: flagString(args.flags, "filename") ?? flagString(args.flags, "file") ?? args.command[2] ?? "cover.png",
-  alt_text: flagString(args.flags, "alt_text") ?? "Demo cover image",
-  caption: flagString(args.flags, "caption") ?? "Generated locally by demo mode.",
+  url: "https://cdn.cli-blog.example/demo/san-francisco/bay-walk.png",
+  original_filename: flagString(args.flags, "filename") ?? flagString(args.flags, "file") ?? args.command[2] ?? "bay-walk.png",
+  alt_text: flagString(args.flags, "alt_text") ?? "Morning light over San Francisco Bay",
+  caption: flagString(args.flags, "caption") ?? "A demo media asset for a San Francisco story.",
   mime_type: flagString(args.flags, "content_type") ?? "image/png",
   width: 1600,
   height: 900,
@@ -68,10 +71,10 @@ const media = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => ({
 });
 
 const term = (args: ParsedArgs, kind: "category" | "tag", overrides: Record<string, unknown> = {}) => {
-  const defaultName = kind === "category" ? "Product Updates" : "launch";
+  const defaultName = kind === "category" ? "San Francisco" : "city-notes";
   const name = flagString(args.flags, "name") ?? defaultName;
   return {
-    id: `demo_${kind}_${kind === "category" ? "product" : "launch"}`,
+    id: `demo_${kind}_${kind === "category" ? "san_francisco" : "city_notes"}`,
     object: "taxonomy_term",
     organization_id: organizationId,
     taxonomy_type: kind,
@@ -79,7 +82,7 @@ const term = (args: ParsedArgs, kind: "category" | "tag", overrides: Record<stri
     locale: localeFor(args),
     name,
     slug: flagString(args.flags, "slug") ?? name.toLowerCase().replaceAll(" ", "-"),
-    description: flagString(args.flags, "description") ?? `${name} demo ${kind}.`,
+    description: flagString(args.flags, "description") ?? `${name} stories from local San Francisco demo content.`,
     metadata: {},
     created_at: now,
     updated_at: now,
@@ -102,7 +105,7 @@ const term = (args: ParsedArgs, kind: "category" | "tag", overrides: Record<stri
 };
 
 const post = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => {
-  const title = flagString(args.flags, "title") ?? "Shipping a developer-first blog workflow";
+  const title = typeof overrides.title === "string" ? overrides.title : flagString(args.flags, "title") ?? "A developer's guide to San Francisco";
   const status = typeof overrides.status === "string" ? overrides.status : flagString(args.flags, "status") ?? "draft";
   const scheduledAt =
     typeof overrides.scheduled_at === "string"
@@ -116,11 +119,11 @@ const post = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => {
     locale: localeFor(args),
     status,
     title,
-    slug: flagString(args.flags, "slug") ?? "developer-first-blog-workflow",
+    slug: typeof overrides.slug === "string" ? overrides.slug : flagString(args.flags, "slug") ?? "developers-guide-to-san-francisco",
     is_featured: true,
-    excerpt: flagString(args.flags, "excerpt") ?? "A complete demo post returned without touching the network.",
+    excerpt: flagString(args.flags, "excerpt") ?? "Fog, hills, neighborhoods, and the little builder rituals that make San Francisco memorable.",
     body_markdown: bodyFor(args),
-    featured_media_asset_id: flagString(args.flags, "featured_media_asset_id") ?? "demo_media_cover",
+    featured_media_asset_id: flagString(args.flags, "featured_media_asset_id") ?? "demo_media_bay_walk",
     published_at: status === "published" ? now : null,
     scheduled_at: scheduledAt,
     version: 3,
@@ -128,10 +131,10 @@ const post = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => {
     created_at: now,
     updated_at: now,
     seo_title: flagString(args.flags, "seo_title") ?? title,
-    seo_description: flagString(args.flags, "seo_description") ?? "Demo SEO description.",
+    seo_description: flagString(args.flags, "seo_description") ?? "A local demo story about parks, neighborhoods, and builder life in San Francisco.",
     canonical_url: flagString(args.flags, "canonical_url") ?? null,
     focus_keyphrase: flagString(args.flags, "focus_keyphrase") ?? null,
-    seo_keywords: flagArray(args.flags, "seo_keywords") ?? ["cli-blog", "demo"],
+    seo_keywords: flagArray(args.flags, "seo_keywords") ?? ["san francisco", "city guide", "demo"],
     robots_index: true,
     robots_follow: true,
     open_graph_title: flagString(args.flags, "open_graph_title") ?? null,
@@ -148,9 +151,9 @@ const post = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => {
 const xml = (kind: "sitemap" | "feed", args: ParsedArgs) => {
   const locale = localeFor(args);
   if (kind === "feed") {
-    return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Cli Blog Demo</title><item><title>Demo post (${locale})</title><link>https://example.com/blog/demo-post</link></item></channel></rss>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>San Francisco notes for builders</title><link>${demoSite}</link><description>Offline Cli Blog demo feed for ${locale}.</description><item><title>A developer's guide to San Francisco</title><link>${demoSite}/developers-guide-to-san-francisco</link><guid>demo_post_sf_guide</guid><description>Fog, hills, neighborhoods, and builder rituals.</description></item><item><title>The best parks in San Francisco</title><link>${demoSite}/best-parks-in-san-francisco</link><guid>demo_post_sf_parks</guid><description>A local parks guide for a quiet afternoon outside.</description></item></channel></rss>`;
   }
-  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://example.com/blog/demo-post</loc><lastmod>${now.slice(0, 10)}</lastmod></url></urlset>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${demoSite}/developers-guide-to-san-francisco</loc><lastmod>${now.slice(0, 10)}</lastmod></url><url><loc>${demoSite}/best-parks-in-san-francisco</loc><lastmod>${now.slice(0, 10)}</lastmod></url></urlset>`;
 };
 
 const deleted = (id: string) => ({ deleted: true, id });
@@ -159,14 +162,14 @@ const runDemoPosts = (args: ParsedArgs) => {
   const action = args.command[1];
   if (action === "revisions") {
     const revisionAction = args.command[2];
-    const postId = args.command[3] ?? "demo_post_launch";
+    const postId = args.command[3] ?? "demo_post_sf_guide";
     if (revisionAction === "list") {
       return list([
         {
           id: "demo_revision_1",
           object: "post_revision",
           parent_post_id: postId,
-          title: "Earlier demo draft",
+          title: "Draft: A developer's guide to San Francisco",
           version: 1,
           created_at: now,
           updated_at: now,
@@ -178,27 +181,33 @@ const runDemoPosts = (args: ParsedArgs) => {
         id: args.command[4] ?? "demo_revision_1",
         object: "post_revision",
         parent_post_id: postId,
-        title: "Earlier demo draft",
+        title: "Draft: A developer's guide to San Francisco",
         version: 1,
-        body_markdown: "## Earlier demo draft\n\nThis is a local revision snapshot.",
+        body_markdown: "## Early notes\n\nStart at the Ferry Building, walk through North Beach, and keep an eye on the fog over Twin Peaks.",
         created_at: now,
         updated_at: now,
       };
     }
   }
   if (action === "redirects" && args.command[2] === "get") {
-    const fromSlug = args.command[3] ?? "old-demo-post";
+    const fromSlug = args.command[3] ?? "old-san-francisco-guide";
     return {
       object: "slug_redirect",
       content_type: "blog_post",
       locale: localeFor(args),
       from_slug: fromSlug,
-      to_slug: "developer-first-blog-workflow",
-      post_id: "demo_post_launch",
+      to_slug: "developers-guide-to-san-francisco",
+      post_id: "demo_post_sf_guide",
       status_code: 301,
     };
   }
-  if (action === "list") return list([post(args, { status: "published" }), post(args, { id: "demo_post_draft", status: "draft", title: "Draft demo post" })], args);
+  if (action === "list") {
+    return list([
+      post(args, { id: "demo_post_sf_guide", status: "published" }),
+      post(args, { id: "demo_post_sf_parks", slug: "best-parks-in-san-francisco", status: "published", title: "The best parks in San Francisco" }),
+      post(args, { id: "demo_post_sf_draft", slug: "mission-coffee-notes", status: "draft", title: "Mission coffee notes" }),
+    ], args);
+  }
   if (action === "get") return post(args, { id: idArg(args) });
   if (action === "create") return post(args);
   if (action === "update") return post(args, { id: idArg(args), version: 4 });
@@ -210,7 +219,7 @@ const runDemoPosts = (args: ParsedArgs) => {
 
 const runDemoAuthors = (args: ParsedArgs) => {
   const action = args.command[1];
-  if (action === "list") return list([author(args), author(args, { id: "demo_author_grace", public_name: "Grace Hopper", slug: "grace-hopper" })], args);
+  if (action === "list") return list([author(args), author(args, { id: "demo_author_rafael", public_name: "Rafael Torres", slug: "rafael-torres", bio: "Maps the best corners of San Francisco for readers who build and wander." })], args);
   if (action === "get") return author(args, { id: idArg(args) });
   if (action === "create" || action === "update") return author(args, { id: action === "update" ? idArg(args) : "demo_author_ada" });
   if (action === "delete") return deleted(idArg(args));
@@ -219,7 +228,7 @@ const runDemoAuthors = (args: ParsedArgs) => {
 
 const runDemoMedia = (args: ParsedArgs) => {
   const action = args.command[1];
-  if (action === "list") return list([media(args)], args);
+  if (action === "list") return list([media(args), media(args, { id: "demo_media_dolores", url: "https://cdn.cli-blog.example/demo/san-francisco/dolores-park.png", original_filename: "dolores-park.png", alt_text: "Dolores Park on a clear San Francisco afternoon" })], args);
   if (action === "get") return media(args, { id: idArg(args) });
   if (action === "upload" || action === "update") return media(args, { id: action === "update" ? idArg(args) : "demo_media_cover" });
   if (action === "delete") return deleted(idArg(args));

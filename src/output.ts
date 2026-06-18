@@ -39,7 +39,7 @@ const formatObject = (value: unknown) => {
 export const help = `Cli Blog CLI
 
 Usage:
-  cli-blog config set --api-key <key> [--api-url <url>]
+  cli-blog config set --api-key <key>
   cli-blog posts list|get|create|update|publish|schedule|delete [options]
   cli-blog posts revisions list|get <post> [revision] [options]
   cli-blog posts redirects get <slug> [options]
@@ -53,7 +53,6 @@ Usage:
 
 Global options:
   --api-key <key>       API key override. Prefer CLI_BLOG_API_KEY to avoid shell-history leaks.
-  --api-url <url>       API base URL. Overrides CLI_BLOG_API_URL and saved config.
   --demo                Return offline demo content without config, API keys, network, or writes.
   --demo-content        Alias for --demo.
   --json                Print JSON output.
@@ -62,8 +61,8 @@ Global options:
 Examples:
   cli-blog posts list --demo --json
   cli-blog posts list --fields summary --include authors
-  cli-blog authors create --public-name "Ada Lovelace" --avatar-media-id media_123
-  cli-blog posts create --title "Hello" --body-markdown ./post.md --author-ids author_123
+  cli-blog authors create --public-name "Maya Chen" --avatar-media-id media_123
+  cli-blog posts create --title "A developer's guide to San Francisco" --body-markdown ./post.md --author-ids author_123
   cli-blog posts publish post_123 --expected-version 3
   cli-blog posts revisions get post_123 rev_123
   cli-blog posts redirects get old-slug --locale en-US
