@@ -14,33 +14,28 @@ Official command-line tool for the Cli Blog API.
 
 `@cli-blog/cli` lets developers, teams, CI jobs, and AI agents publish and manage Cli Blog content from a terminal. It wraps the public `/v1` content API with commands for posts, authors, media, categories, tags, locales, sitemap XML, feed XML, revisions, and slug redirects.
 
-The package name is `@cli-blog/cli`, but the installed command is `cli-blog`:
+After install, run commands with `cli-blog`:
 
 ```sh
-npm install -g @cli-blog/cli
 cli-blog posts list --demo --json
 ```
 
-You can also run it without a global install:
+## Install
 
-```sh
-npx @cli-blog/cli posts list --demo --json
-```
-
-## Getting Started
-
-Try the CLI without setup. Demo mode is fully offline and uses San Francisco sample content:
-
-```sh
-npx @cli-blog/cli posts list --demo --json
-npx @cli-blog/cli posts create --demo --title "A developer's guide to San Francisco"
-npx @cli-blog/cli feed get --demo
-```
-
-Install it globally when you want the `cli-blog` command available everywhere:
+Global install:
 
 ```sh
 npm install -g @cli-blog/cli
+bun add -g @cli-blog/cli
+pnpm add -g @cli-blog/cli
+```
+
+Run without installing:
+
+```sh
+npx @cli-blog/cli posts list --demo --json
+bunx @cli-blog/cli posts list --demo --json
+pnpm dlx @cli-blog/cli posts list --demo --json
 ```
 
 Configure a private API key for trusted publishing:
@@ -49,7 +44,7 @@ Configure a private API key for trusted publishing:
 cli-blog config set --api-key "$CLI_BLOG_PRIVATE_KEY"
 ```
 
-Environment variables override saved config and are recommended for CI:
+Or set an environment variable, which is usually best for CI:
 
 ```sh
 CLI_BLOG_API_KEY=cli_blog_sk_...
@@ -63,96 +58,84 @@ Configuration precedence is:
 
 Prefer environment variables or a secret manager for private keys. Avoid passing private keys through `--api-key` because shell history and local process inspection may expose command arguments.
 
-## Demo Mode
+## Try It Without Setup
 
-Demo mode returns deterministic San Francisco sample content without config, API keys, network requests, file reads, uploads, writes, or destructive prompts.
+Demo mode is fully offline. It returns deterministic San Francisco sample content without config, API keys, network requests, file reads, uploads, writes, or destructive prompts.
+
+```sh
+cli-blog posts list --demo --json
+cli-blog posts create --demo --title "A developer's guide to San Francisco" --json
+cli-blog feed get --demo
+```
 
 Use either flag:
 
 ```sh
-cli-blog posts list --demo
-cli-blog posts list --demo-content
+--demo
+--demo-content
 ```
 
-Demo mode works across the public command surface:
+## Command Guide
 
-```sh
-cli-blog posts create --demo --title "A developer's guide to San Francisco"
-cli-blog authors create --demo --public-name "Maya Chen"
-cli-blog media upload --demo --file ./bay-walk.png --alt-text "Morning light over San Francisco Bay"
-cli-blog categories create --demo --name "San Francisco"
-cli-blog tags create --demo --name "city-notes"
-cli-blog posts revisions list demo_post_sf_guide --demo --json
-cli-blog posts redirects get old-san-francisco-guide --demo --json
-cli-blog sitemap get --demo
-cli-blog feed get --demo
-```
-
-## Reference
-
-Global options:
+Global options work on every command:
 
 | Option | Description |
 | --- | --- |
 | `--api-key <key>` | API key override. Prefer `CLI_BLOG_API_KEY` for private keys. |
 | `--demo` | Return offline demo content without setup. |
 | `--demo-content` | Alias for `--demo`. |
-| `--json` | Print formatted JSON. |
+| `--json` | Print formatted JSON for successful JSON responses. |
 | `--yes` | Skip confirmation prompts for destructive real API commands. |
 | `--help` | Print CLI help. |
 | `--version` | Print the CLI version. |
 
-Commands:
+### Posts
 
-| Command | Purpose |
-| --- | --- |
-| `config set --api-key <key>` | Save local CLI configuration. |
-| `posts list [options]` | List posts with filters, field groups, and includes. |
-| `posts get <id-or-slug> [options]` | Fetch one post by ID or locale-scoped slug. |
-| `posts create [options]` | Create a post. |
-| `posts update <id-or-slug> [options]` | Update a post. |
-| `posts publish <id-or-slug> [options]` | Publish a post. |
-| `posts schedule <id-or-slug> --scheduled-at <iso>` | Schedule a post. |
-| `posts delete <id-or-slug> [options]` | Delete a post after confirmation. |
-| `posts revisions list <post> [options]` | List post revisions. |
-| `posts revisions get <post> <revision> [options]` | Fetch a revision snapshot. |
-| `posts redirects get <slug> [options]` | Resolve a historical post slug redirect. |
-| `authors list|get|create|update|delete` | Manage public author profiles. |
-| `media list|get|upload|update|delete` | Manage uploaded media assets. |
-| `categories list|get|create|update|delete` | Manage category terms. |
-| `tags list|get|create|update|delete` | Manage tag terms. |
-| `locales list` | List supported BCP 47 locale tags. |
-| `sitemap get [options]` | Fetch sitemap XML. |
-| `feed get [options]` | Fetch feed XML. |
+| Command | Use it for | Common options |
+| --- | --- | --- |
+| `posts list` | List posts. | `--status`, `--locale`, `--limit`, `--search`, `--sort`, `--direction`, `--fields`, `--include`, author/category/tag filters. |
+| `posts get <id-or-slug>` | Fetch one post. | `--locale`, `--fields`, `--include`. |
+| `posts create` | Create a post. | `--title`, `--body`, `--body-markdown`, `--status`, `--locale`, author/category/tag/media IDs, SEO options. |
+| `posts update <id-or-slug>` | Update a post. | Same editable fields as create, plus `--expected-version`. |
+| `posts publish <id-or-slug>` | Publish a post. | `--expected-version`, `--published-at`, `--locale`. |
+| `posts schedule <id-or-slug>` | Schedule a post. | `--scheduled-at` or `--at`, `--expected-version`, `--locale`. |
+| `posts delete <id-or-slug>` | Delete/archive a post. | `--locale`, `--yes`. |
 
-Common post options:
+List posts:
 
 ```sh
---title <text>
---slug <slug>
---locale <tag>
---body <markdown-or-path>
---body-markdown <markdown-or-path>
---status draft|in_review|scheduled|published|archived
---published-at <iso>
---scheduled-at <iso>
---expected-version <number>
---author-ids <id,id>
---category-ids <id,id>
---tag-ids <id,id>
---featured-media-asset-id <id>
---fields summary,content,seo,workflow,metadata
---include authors,categories,tags,media,translations
+cli-blog posts list \
+  --status published \
+  --locale en-US \
+  --fields summary,seo \
+  --include authors,categories,tags,media \
+  --limit 20 \
+  --json
 ```
 
-## Examples
+Expected result shape:
 
-Create an author, category, tag, and post:
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "post_123",
+      "object": "post",
+      "title": "A developer's guide to San Francisco",
+      "slug": "developers-guide-to-san-francisco",
+      "status": "published",
+      "authors": [{ "id": "author_123", "object": "author", "public_name": "Maya Chen" }]
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
+```
+
+Create and publish:
 
 ```sh
-cli-blog authors create --public-name "Maya Chen" --bio "Field notes from San Francisco" --json
-cli-blog categories create --name "San Francisco" --locale en-US --json
-cli-blog tags create --name "city-notes" --locale en-US --json
 cli-blog posts create \
   --title "A developer's guide to San Francisco" \
   --body-markdown ./post.md \
@@ -161,22 +144,229 @@ cli-blog posts create \
   --tag-ids term_tag_123 \
   --seo-title "A developer's guide to San Francisco" \
   --json
+
+cli-blog posts publish post_123 --expected-version 1 --json
 ```
 
-Review and publish with optimistic concurrency:
+Expected publish result shape:
+
+```json
+{
+  "id": "post_123",
+  "object": "post",
+  "status": "published",
+  "slug": "developers-guide-to-san-francisco",
+  "version": 2
+}
+```
+
+Post filters:
 
 ```sh
-cli-blog posts get post_123 --fields summary,content,seo --include authors,categories,tags --json
-cli-blog posts update post_123 --expected-version 2 --excerpt "Fog, hills, neighborhoods, and builder rituals."
-cli-blog posts publish post_123 --expected-version 3
+--status draft|in_review|scheduled|published|archived
+--locale en-US
+--search "coffee"
+--sort published_at|created_at|updated_at|relevance
+--direction asc|desc
+--author-id author_123
+--author-slug maya-chen
+--category-id term_category_123
+--category-slug san-francisco
+--tag-id term_tag_123
+--tag-slug city-notes
+--fields summary,content,seo,workflow,metadata
+--include authors,categories,tags,media,translations
 ```
 
-Fetch XML helpers:
+Post create/update fields:
+
+```sh
+--title <text>
+--slug <slug>
+--body <markdown-or-path>
+--body-markdown <markdown-or-path>
+--excerpt <text>
+--status draft|in_review|scheduled|published|archived
+--published-at <iso>
+--scheduled-at <iso>
+--expected-version <number>
+--author-ids <id,id>
+--category-ids <id,id>
+--tag-ids <id,id>
+--featured-media-asset-id <id>
+--metadata '{"source":"ci"}'
+```
+
+SEO options for posts, categories, and tags:
+
+```sh
+--seo-title <text>
+--seo-description <text>
+--canonical-url <url>
+--focus-keyphrase <text>
+--seo-keywords <word,word>
+--robots-index=true|false
+--robots-follow=true|false
+--open-graph-title <text>
+--open-graph-description <text>
+--open-graph-media-asset-id <id>
+--twitter-title <text>
+--twitter-description <text>
+--twitter-media-asset-id <id>
+--schema-type <type>
+```
+
+### Authors
+
+| Command | Use it for | Options |
+| --- | --- | --- |
+| `authors list` | List public authors. | `--limit`. |
+| `authors get <id-or-slug>` | Fetch one author. | None. |
+| `authors create` | Create an author. | `--public-name`, `--name`, `--slug`, `--bio`, `--avatar-media-id`, `--website-url`, `--metadata`. |
+| `authors update <id-or-slug>` | Update an author. | Same fields as create. |
+| `authors delete <id-or-slug>` | Delete an author. | `--yes`. |
+
+```sh
+cli-blog authors create \
+  --public-name "Maya Chen" \
+  --bio "Field notes from San Francisco" \
+  --website-url "https://example.com/authors/maya-chen" \
+  --json
+```
+
+Expected result shape:
+
+```json
+{
+  "id": "author_123",
+  "object": "author",
+  "public_name": "Maya Chen",
+  "slug": "maya-chen",
+  "bio": "Field notes from San Francisco"
+}
+```
+
+### Media
+
+| Command | Use it for | Options |
+| --- | --- | --- |
+| `media list` | List media assets. | `--limit`. |
+| `media get <id>` | Fetch one media asset. | None. |
+| `media upload --file <path>` | Upload a local file. | `--file`, `--filename`, `--alt-text`, `--caption`, `--content-type`, `--metadata`. |
+| `media update <id>` | Update media metadata. | `--alt-text`, `--caption`, `--metadata`. |
+| `media delete <id>` | Delete media. | `--yes`. |
+
+```sh
+cli-blog media upload \
+  --file ./bay-walk.png \
+  --alt-text "Morning light over San Francisco Bay" \
+  --caption "A local image for a San Francisco story." \
+  --json
+```
+
+Expected result shape:
+
+```json
+{
+  "id": "media_123",
+  "object": "media_asset",
+  "url": "https://cdn.example.com/media/bay-walk.png",
+  "original_filename": "bay-walk.png",
+  "alt_text": "Morning light over San Francisco Bay",
+  "mime_type": "image/png"
+}
+```
+
+### Categories And Tags
+
+| Command | Use it for | Options |
+| --- | --- | --- |
+| `categories list` / `tags list` | List terms. | `--locale`, `--include translations`, `--limit`. |
+| `categories get <id-or-slug>` / `tags get <id-or-slug>` | Fetch one term. | `--locale`, `--include translations`. |
+| `categories create` / `tags create` | Create a term. | `--name`, `--slug`, `--locale`, `--description`, `--translation-of-id`, SEO options. |
+| `categories update <id-or-slug>` / `tags update <id-or-slug>` | Update a term. | Same fields as create, optional `--locale`. |
+| `categories delete <id-or-slug>` / `tags delete <id-or-slug>` | Delete a term. | `--locale`, `--yes`. |
+
+```sh
+cli-blog categories create --name "San Francisco" --locale en-US --json
+cli-blog tags create --name "City Notes" --locale en-US --json
+```
+
+Expected result shape:
+
+```json
+{
+  "id": "term_123",
+  "object": "taxonomy_term",
+  "taxonomy_type": "category",
+  "locale": "en-US",
+  "name": "San Francisco",
+  "slug": "san-francisco"
+}
+```
+
+### Locales
+
+```sh
+cli-blog locales list --json
+```
+
+Expected result shape:
+
+```json
+[
+  { "tag": "en-US", "name": "English (United States)", "language": "English", "region": "United States" },
+  { "tag": "es-MX", "name": "Spanish (Mexico)", "language": "Spanish", "region": "Mexico" }
+]
+```
+
+### Revisions And Redirects
+
+```sh
+cli-blog posts revisions list post_123 --json
+cli-blog posts revisions get post_123 rev_123 --json
+cli-blog posts redirects get old-san-francisco-guide --locale en-US --json
+```
+
+Expected result shape:
+
+```json
+{
+  "object": "slug_redirect",
+  "from_slug": "old-san-francisco-guide",
+  "to_slug": "developers-guide-to-san-francisco",
+  "post_id": "post_123",
+  "status_code": 301
+}
+```
+
+### Sitemap And Feed
 
 ```sh
 cli-blog sitemap get --locale en-US > sitemap.xml
 cli-blog feed get --locale en-US > feed.xml
 ```
+
+These commands print XML unless `--json` is used on commands that return JSON.
+
+## Demo Mode Examples
+
+Demo mode works across the public command surface:
+
+```sh
+cli-blog posts list --demo --json
+cli-blog posts create --demo --title "A developer's guide to San Francisco" --json
+cli-blog authors create --demo --public-name "Maya Chen" --json
+cli-blog media upload --demo --file ./missing.png --json
+cli-blog categories create --demo --name "San Francisco" --json
+cli-blog tags create --demo --name "City Notes" --json
+cli-blog posts revisions list demo_post_sf_guide --demo --json
+cli-blog posts redirects get old-san-francisco-guide --demo --json
+cli-blog sitemap get --demo
+cli-blog feed get --demo
+```
+
+The `media upload --demo` command does not read the file path. It returns a sample media object so you can test output parsing before setting up real storage or keys.
 
 ## Errors
 
@@ -195,21 +385,6 @@ Common cases:
 | API `409` | The `--expected-version` value is stale. | Fetch the latest post, then retry with the current version. |
 
 Use `--json` when you want successful output to be machine-readable. Errors intentionally stay on stderr.
-
-## Publishing A New Version
-
-This repository publishes to npm from GitHub releases after `NPM_TOKEN` is configured in repository Actions secrets.
-
-For a CLI-only patch:
-
-```sh
-npm version patch
-git push origin main --follow-tags
-```
-
-Then create a GitHub release for the new tag, such as `v0.1.1`. The publish workflow verifies that the release tag matches `package.json`, runs typecheck/tests/build, and publishes with npm provenance.
-
-If the CLI depends on a new `@cli-blog/node` version, publish `@cli-blog/node` first, then update this package's dependency and publish the CLI.
 
 ## Security
 
