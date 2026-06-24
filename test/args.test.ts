@@ -17,11 +17,9 @@ describe("@cli-blog/cli args", () => {
     expect(flagString(args.flags, "public_name")).toBe("Ada Lovelace");
   });
 
-  test("parses demo flags as booleans", () => {
+  test("parses demo flag as a boolean", () => {
     const demo = parseArgs(["posts", "list", "--demo"]);
-    const demoContent = parseArgs(["posts", "list", "--demo-content"]);
 
     expect(flagBoolean(demo.flags, "demo")).toBe(true);
-    expect(flagBoolean(demoContent.flags, "demo_content")).toBe(true);
   });
 });

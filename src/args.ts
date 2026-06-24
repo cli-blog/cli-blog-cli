@@ -3,7 +3,7 @@ export type ParsedArgs = {
   flags: Record<string, string | boolean | string[]>;
 };
 
-const booleanFlags = new Set(["json", "yes", "help", "version", "demo", "demo_content"]);
+const booleanFlags = new Set(["json", "yes", "help", "version", "demo"]);
 
 const setFlag = (flags: ParsedArgs["flags"], key: string, value: string | boolean) => {
   const current = flags[key];

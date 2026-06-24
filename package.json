@@ -1,6 +1,6 @@
 {
   "name": "@cli-blog/cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Official Cli Blog command-line tool for publishing, automation, and offline demos.",
   "type": "module",
   "license": "MIT",
@@ -26,7 +26,6 @@
     "automation",
     "ci",
     "smoke-test",
-    "demo-content",
     "ai-agents"
   ],
   "author": "Cli Blog",
@@ -56,7 +55,7 @@
     "pack:dry": "bun run build && bun pm pack --dry-run"
   },
   "dependencies": {
-    "@cli-blog/node": "0.1.2"
+    "@cli-blog/node": "0.1.3"
   },
   "devDependencies": {
     "@types/node": "20.19.27",

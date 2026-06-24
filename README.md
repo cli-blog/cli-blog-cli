@@ -8,11 +8,11 @@
 
 Official command-line tool for the Cli Blog API.
 
-[Homepage](https://cli-blog.com) · [Documentation](https://cli-blog.com/docs) · [CLI Docs](https://cli-blog.com/docs/cli) · [API Reference](https://cli-blog.com/docs/reference/endpoints) · [GitHub](https://github.com/cli-blog/cli-blog-cli)
+[Homepage](https://cli-blog.com) · [Documentation](https://cli-blog.com/docs) · [CLI Docs](https://cli-blog.com/docs/cli) · [API Reference](https://cli-blog.com/docs/reference/endpoints) · [Agent Skill](https://github.com/cli-blog/cli-blog-skill) · [GitHub](https://github.com/cli-blog/cli-blog-cli)
 
 ## What Is This?
 
-`@cli-blog/cli` lets developers, teams, CI jobs, and AI agents publish and manage Cli Blog content from a terminal. It wraps the public `/v1` content API with commands for posts, authors, media, categories, tags, locales, sitemap XML, feed XML, revisions, and slug redirects.
+`@cli-blog/cli` lets developers, teams, CI jobs, and AI agents publish and manage [Cli Blog](https://cli-blog.com) content from a terminal. It wraps the public `/v1` content API with commands for [posts](#posts), [authors](#authors), [media](#media), [categories](#categories-and-tags), [tags](#categories-and-tags), [locales](#locales), [sitemap XML](#sitemap-and-feed), [feed XML](#sitemap-and-feed), [revisions](#revisions-and-redirects), and [slug redirects](#revisions-and-redirects).
 
 After install, run commands with `cli-blog`:
 
@@ -22,19 +22,39 @@ cli-blog posts list --demo --json
 
 ## Install
 
-Global install:
+Global install with npm:
 
 ```sh
 npm install -g @cli-blog/cli
+```
+
+Global install with Bun:
+
+```sh
 bun add -g @cli-blog/cli
+```
+
+Global install with pnpm:
+
+```sh
 pnpm add -g @cli-blog/cli
 ```
 
-Run without installing:
+Run without installing with npx:
 
 ```sh
 npx @cli-blog/cli posts list --demo --json
+```
+
+Run without installing with Bun:
+
+```sh
 bunx @cli-blog/cli posts list --demo --json
+```
+
+Run without installing with pnpm:
+
+```sh
 pnpm dlx @cli-blog/cli posts list --demo --json
 ```
 
@@ -68,12 +88,15 @@ cli-blog posts create --demo --title "A developer's guide to San Francisco" --js
 cli-blog feed get --demo
 ```
 
-Use either flag:
+Run the same demo commands without installing:
 
 ```sh
---demo
---demo-content
+npx @cli-blog/cli posts list --demo --json
+bunx @cli-blog/cli posts create --demo --title "A developer's guide to San Francisco" --json
+pnpm dlx @cli-blog/cli feed get --demo
 ```
+
+Use `--demo` on any command that should return sample output instead of calling the API.
 
 ## Command Guide
 
@@ -83,7 +106,6 @@ Global options work on every command:
 | --- | --- |
 | `--api-key <key>` | API key override. Prefer `CLI_BLOG_API_KEY` for private keys. |
 | `--demo` | Return offline demo content without setup. |
-| `--demo-content` | Alias for `--demo`. |
 | `--json` | Print formatted JSON for successful JSON responses. |
 | `--yes` | Skip confirmation prompts for destructive real API commands. |
 | `--help` | Print CLI help. |
@@ -164,7 +186,7 @@ Post filters:
 
 ```sh
 --status draft|in_review|scheduled|published|archived
---locale en-US
+--locale en-US # optional; omit to use your organization's default locale.
 --search "coffee"
 --sort published_at|created_at|updated_at|relevance
 --direction asc|desc
@@ -183,8 +205,8 @@ Post create/update fields:
 ```sh
 --title <text>
 --slug <slug>
---body <markdown-or-path>
---body-markdown <markdown-or-path>
+--body <markdown-or-path> # optional.
+--body-markdown <markdown-or-path> # optional.
 --excerpt <text>
 --status draft|in_review|scheduled|published|archived
 --published-at <iso>
@@ -281,9 +303,9 @@ Expected result shape:
 
 | Command | Use it for | Options |
 | --- | --- | --- |
-| `categories list` / `tags list` | List terms. | `--locale`, `--include translations`, `--limit`. |
-| `categories get <id-or-slug>` / `tags get <id-or-slug>` | Fetch one term. | `--locale`, `--include translations`. |
-| `categories create` / `tags create` | Create a term. | `--name`, `--slug`, `--locale`, `--description`, `--translation-of-id`, SEO options. |
+| `categories list` / `tags list` | List terms. | Optional: `--locale`, `--include translations`, `--limit`. |
+| `categories get <id-or-slug>` / `tags get <id-or-slug>` | Fetch one term. | Optional: `--locale`, `--include translations`. |
+| `categories create` / `tags create` | Create a term. | Required: `--name`. Optional: `--slug`, `--locale`, `--description`, `--translation-of-id`, SEO options. |
 | `categories update <id-or-slug>` / `tags update <id-or-slug>` | Update a term. | Same fields as create, optional `--locale`. |
 | `categories delete <id-or-slug>` / `tags delete <id-or-slug>` | Delete a term. | `--locale`, `--yes`. |
 
@@ -367,6 +389,10 @@ cli-blog feed get --demo
 ```
 
 The `media upload --demo` command does not read the file path. It returns a sample media object so you can test output parsing before setting up real storage or keys.
+
+## AI Agent Skill
+
+If you want an AI coding agent to add Cli Blog to an application, use the [Cli Blog agent skill](https://github.com/cli-blog/cli-blog-skill). It includes guidance for choosing the API, SDK, or CLI, plus framework patterns for common app stacks.
 
 ## Errors
 

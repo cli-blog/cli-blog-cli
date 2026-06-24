@@ -192,7 +192,7 @@ describe("@cli-blog/cli run", () => {
       ["tags", "create", "--demo", "--name", "release"],
       ["tags", "update", "demo_tag_launch", "--demo", "--name", "shipping"],
       ["tags", "delete", "demo_tag_launch", "--demo"],
-      ["locales", "list", "--demo-content"],
+      ["locales", "list", "--demo"],
       ["sitemap", "get", "--demo"],
       ["feed", "get", "--demo"],
     ];
@@ -218,5 +218,9 @@ describe("@cli-blog/cli run", () => {
       object: "post",
       title: "Local demo",
     });
+  });
+
+  test("prints version without requiring a command", async () => {
+    expect(await run({ argv: ["--version"], env: {} })).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

@@ -67,7 +67,7 @@ const compact = <T extends Record<string, unknown>>(value: T) =>
     [K in keyof T as undefined extends T[K] ? K : K]: Exclude<T[K], undefined>;
   };
 
-const demoMode = (args: ParsedArgs) => flagBoolean(args.flags, "demo") || flagBoolean(args.flags, "demo_content");
+const demoMode = (args: ParsedArgs) => flagBoolean(args.flags, "demo");
 
 const clientFor = async (args: ParsedArgs, env: NodeJS.ProcessEnv = process.env) => {
   const saved = await readConfig();
@@ -360,8 +360,8 @@ const runFeed = async (args: ParsedArgs, client: CliBlog) => {
 export const run = async ({ argv, env = process.env }: RunOptions): Promise<unknown> => {
   const args = parseArgs(argv);
 
-  if (!args.command.length || flagBoolean(args.flags, "help")) return help;
   if (flagBoolean(args.flags, "version")) return CLI_BLOG_CLI_VERSION;
+  if (!args.command.length || flagBoolean(args.flags, "help")) return help;
   if (args.command[0] === "config") return runConfig(args, env);
   if (demoMode(args)) return runDemo(args);
 

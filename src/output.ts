@@ -54,7 +54,6 @@ Usage:
 Global options:
   --api-key <key>       API key override. Prefer CLI_BLOG_API_KEY to avoid shell-history leaks.
   --demo                Return offline demo content without config, API keys, network, or writes.
-  --demo-content        Alias for --demo.
   --json                Print JSON output.
   --yes                 Skip destructive confirmation prompts.
 
