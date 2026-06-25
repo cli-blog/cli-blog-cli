@@ -61,13 +61,13 @@ pnpm dlx @cli-blog/cli posts list --demo --json
 Configure a private API key for trusted publishing:
 
 ```sh
-cli-blog config set --api-key "$CLI_BLOG_PRIVATE_KEY"
+cli-blog config set --api-key "$CLI_BLOG_API_KEY"
 ```
 
 Or set an environment variable, which is usually best for CI:
 
 ```sh
-CLI_BLOG_API_KEY=cli_blog_sk_...
+CLI_BLOG_API_KEY=<private-api-key>
 ```
 
 Configuration precedence is:
