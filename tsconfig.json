@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "declarationMap": true,
+    "declarationMap": false,
     "exactOptionalPropertyTypes": true,
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "NodeNext",

@@ -106,7 +106,7 @@ Global options work on every command:
 | --- | --- |
 | `--api-key <key>` | API key override. Prefer `CLI_BLOG_API_KEY` for private keys. |
 | `--demo` | Return offline demo content without setup. |
-| `--json` | Print formatted JSON for successful JSON responses. |
+| `--json` | Print formatted JSON for successful responses and structured errors to stderr. |
 | `--yes` | Skip confirmation prompts for destructive real API commands. |
 | `--help` | Print CLI help. |
 | `--version` | Print the CLI version. |
@@ -115,7 +115,7 @@ Global options work on every command:
 
 | Command | Use it for | Common options |
 | --- | --- | --- |
-| `posts list` | List posts. | `--status`, `--locale`, `--limit`, `--search`, `--sort`, `--direction`, `--fields`, `--include`, author/category/tag filters. |
+| `posts list` | List posts. | `--status`, `--locale`, `--limit`, `--after`, `--page`, `--per-page`, `--search`, `--sort`, `--direction`, `--fields`, `--include`, author/category/tag filters. |
 | `posts get <id-or-slug>` | Fetch one post. | `--locale`, `--fields`, `--include`. |
 | `posts create` | Create a post. | `--title`, `--body`, `--body-markdown`, `--status`, `--locale`, author/category/tag/media IDs, SEO options. |
 | `posts update <id-or-slug>` | Update a post. | Same editable fields as create, plus `--expected-version`. |
@@ -133,6 +133,12 @@ cli-blog posts list \
   --include authors,categories,tags,media \
   --limit 20 \
   --json
+```
+
+Use `--limit` with `--after` for cursor pagination, or use `--page` with optional `--per-page` for exact numbered pages. Do not combine cursor and numbered controls.
+
+```sh
+cli-blog posts list --status published --page 2 --per-page 20 --json
 ```
 
 Expected result shape:
@@ -192,10 +198,22 @@ Post filters:
 --direction asc|desc
 --author-id author_123
 --author-slug maya-chen
+--author-match any|all
+--exclude-author-id author_456
+--exclude-author-slug internal-author
 --category-id term_category_123
 --category-slug san-francisco
+--category-match any|all
+--exclude-category-id term_category_456
+--exclude-category-slug internal
 --tag-id term_tag_123
 --tag-slug city-notes
+--tag-match any|all
+--exclude-tag-id term_tag_456
+--exclude-tag-slug draft
+--after <cursor>
+--page <number>
+--per-page <number>
 --fields summary,content,seo,workflow,metadata
 --include authors,categories,tags,media,translations
 ```
@@ -216,6 +234,7 @@ Post create/update fields:
 --category-ids <id,id>
 --tag-ids <id,id>
 --featured-media-asset-id <id>
+--media-asset-ids <id,id>
 --metadata '{"source":"ci"}'
 ```
 
@@ -242,9 +261,9 @@ SEO options for posts, categories, and tags:
 
 | Command | Use it for | Options |
 | --- | --- | --- |
-| `authors list` | List public authors. | `--limit`. |
+| `authors list` | List public authors. | `--limit`, `--after`, `--page`, `--per-page`. |
 | `authors get <id-or-slug>` | Fetch one author. | None. |
-| `authors create` | Create an author. | `--public-name`, `--name`, `--slug`, `--bio`, `--avatar-media-id`, `--website-url`, `--metadata`. |
+| `authors create` | Create an author. | `--public-name`, `--name`, `--member-id`, `--slug`, `--bio`, `--avatar-media-id`, `--website-url`, `--metadata`. |
 | `authors update <id-or-slug>` | Update an author. | Same fields as create. |
 | `authors delete <id-or-slug>` | Delete an author. | `--yes`. |
 
@@ -272,7 +291,7 @@ Expected result shape:
 
 | Command | Use it for | Options |
 | --- | --- | --- |
-| `media list` | List media assets. | `--limit`. |
+| `media list` | List media assets. | `--limit`, `--after`, `--page`, `--per-page`. |
 | `media get <id>` | Fetch one media asset. | None. |
 | `media upload --file <path>` | Upload a local file. | `--file`, `--filename`, `--alt-text`, `--caption`, `--content-type`, `--metadata`. |
 | `media update <id>` | Update media metadata. | `--alt-text`, `--caption`, `--metadata`. |
@@ -285,6 +304,8 @@ cli-blog media upload \
   --caption "A local image for a San Francisco story." \
   --json
 ```
+
+The CLI infers supported MIME types from common file extensions. Use `--content-type` when a filename has no recognized extension.
 
 Expected result shape:
 
@@ -303,7 +324,7 @@ Expected result shape:
 
 | Command | Use it for | Options |
 | --- | --- | --- |
-| `categories list` / `tags list` | List terms. | Optional: `--locale`, `--include translations`, `--limit`. |
+| `categories list` / `tags list` | List terms. | Optional: `--locale`, `--include translations`, `--limit`, `--after`, `--page`, `--per-page`. |
 | `categories get <id-or-slug>` / `tags get <id-or-slug>` | Fetch one term. | Optional: `--locale`, `--include translations`. |
 | `categories create` / `tags create` | Create a term. | Required: `--name`. Optional: `--slug`, `--locale`, `--description`, `--translation-of-id`, SEO options. |
 | `categories update <id-or-slug>` / `tags update <id-or-slug>` | Update a term. | Same fields as create, optional `--locale`. |
@@ -345,7 +366,7 @@ Expected result shape:
 ### Revisions And Redirects
 
 ```sh
-cli-blog posts revisions list post_123 --json
+cli-blog posts revisions list post_123 --page 1 --per-page 20 --json
 cli-blog posts revisions get post_123 rev_123 --json
 cli-blog posts redirects get old-san-francisco-guide --locale en-US --json
 ```
@@ -410,7 +431,7 @@ Common cases:
 | API `404` | The resource ID or locale-scoped slug was not found. | Check the ID, slug, and `--locale`. |
 | API `409` | The `--expected-version` value is stale. | Fetch the latest post, then retry with the current version. |
 
-Use `--json` when you want successful output to be machine-readable. Errors intentionally stay on stderr.
+Use `--json` when you want machine-readable output. Errors remain on stderr and use `{ "error": { "code", "message", "param", "request_id", "status" } }`.
 
 ## Security
 

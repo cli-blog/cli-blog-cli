@@ -56,10 +56,15 @@ Global options:
   --demo                Return offline demo content without config, API keys, network, or writes.
   --json                Print JSON output.
   --yes                 Skip destructive confirmation prompts.
+  --limit <number>      Cursor page size for list commands.
+  --after <cursor>      Cursor returned by a previous list response.
+  --page <number>       Exact one-based numbered page for list commands.
+  --per-page <number>   Page size for numbered list commands. Requires --page.
 
 Examples:
   cli-blog posts list --demo --json
   cli-blog posts list --fields summary --include authors
+  cli-blog posts list --page 2 --per-page 20 --json
   cli-blog authors create --public-name "Maya Chen" --avatar-media-id media_123
   cli-blog posts create --title "A developer's guide to San Francisco" --body-markdown ./post.md --author-ids author_123
   cli-blog posts publish post_123 --expected-version 3

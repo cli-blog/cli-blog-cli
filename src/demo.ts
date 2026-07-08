@@ -14,6 +14,15 @@ const numberFlag = (args: ParsedArgs, key: string, fallback: number) => {
   return number;
 };
 
+const optionalNumberFlag = (args: ParsedArgs, key: string) => {
+  const value = flagString(args.flags, key);
+  if (value === undefined) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
+const hasFlag = (args: ParsedArgs, key: string) => args.flags[key] !== undefined;
+
 const idArg = (args: ParsedArgs, position = 2, fallback = "demo_123") => args.command[position] ?? fallback;
 
 const localeFor = (args: ParsedArgs) => flagString(args.flags, "locale") ?? "en-US";
@@ -29,12 +38,46 @@ const bodyFor = (args: ParsedArgs) => {
   return body;
 };
 
-const list = <T>(data: T[], args: ParsedArgs) => ({
-  object: "list" as const,
-  data: data.slice(0, numberFlag(args, "limit", data.length)),
-  has_more: false,
-  next_cursor: null,
-});
+const list = <T>(data: T[], args: ParsedArgs) => {
+  const cursorMode = hasFlag(args, "after") || hasFlag(args, "limit");
+  const numberedMode = hasFlag(args, "page") || hasFlag(args, "per_page");
+
+  if (cursorMode && numberedMode) {
+    throw new CliBlogError("Do not combine --page/--per-page with --after/--limit", {
+      code: "pagination_mode_conflict",
+      param: hasFlag(args, "page") ? "page" : "per_page",
+    });
+  }
+
+  if (hasFlag(args, "per_page") && !hasFlag(args, "page")) {
+    throw new CliBlogError("--per-page requires --page", { code: "validation_error", param: "per_page" });
+  }
+
+  if (numberedMode) {
+    const page = optionalNumberFlag(args, "page") ?? 1;
+    const perPage = optionalNumberFlag(args, "per_page") ?? 20;
+    const start = (page - 1) * perPage;
+    const pageData = data.slice(start, start + perPage);
+    const totalPages = data.length === 0 ? 0 : Math.ceil(data.length / perPage);
+    return {
+      object: "list" as const,
+      data: pageData,
+      has_more: page < totalPages,
+      next_cursor: page < totalPages ? `demo_cursor_page_${page + 1}` : null,
+      page,
+      per_page: perPage,
+      total_items: data.length,
+      total_pages: totalPages,
+    };
+  }
+
+  return {
+    object: "list" as const,
+    data: data.slice(0, numberFlag(args, "limit", data.length)),
+    has_more: false,
+    next_cursor: null,
+  };
+};
 
 const author = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => ({
   id: "demo_author_maya",
@@ -99,7 +142,7 @@ const term = (args: ParsedArgs, kind: "category" | "tag", overrides: Record<stri
     twitter_title: null,
     twitter_description: null,
     twitter_media_asset_id: null,
-    schema_type: null,
+    schema_type: "CollectionPage",
     ...overrides,
   };
 };
@@ -124,6 +167,7 @@ const post = (args: ParsedArgs, overrides: Record<string, unknown> = {}) => {
     excerpt: flagString(args.flags, "excerpt") ?? "Fog, hills, neighborhoods, and the little builder rituals that make San Francisco memorable.",
     body_markdown: bodyFor(args),
     featured_media_asset_id: flagString(args.flags, "featured_media_asset_id") ?? "demo_media_bay_walk",
+    media_asset_ids: flagArray(args.flags, "media_asset_ids") ?? ["demo_media_bay_walk"],
     published_at: status === "published" ? now : null,
     scheduled_at: scheduledAt,
     version: 3,

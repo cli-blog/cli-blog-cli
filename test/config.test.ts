@@ -19,7 +19,7 @@ describe("@cli-blog/cli config security", () => {
     await chmod(directory, 0o755);
     await writeFile(path, '{"apiKey":"old"}\n', { mode: 0o644 });
 
-    await writeConfig({ apiKey: "cli_blog_sk_test" }, path);
+    await writeConfig({ apiKey: "<private-api-key>" }, path);
 
     expect((await stat(directory)).mode & 0o777).toBe(0o700);
     expect((await stat(path)).mode & 0o777).toBe(0o600);

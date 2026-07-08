@@ -1,4 +1,5 @@
 import { access, readFile } from "node:fs/promises";
+import { basename, extname } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -7,10 +8,12 @@ import {
   CliBlogError,
   type CreatePostInput,
   type CreateTermInput,
+  type Metadata,
   type PostFieldGroup,
   type PostInclude,
   type PostGetParams,
   type PostListParams,
+  type RelationMatch,
   type SeoFields,
   type TermInclude,
   type UpdatePostInput,
@@ -38,17 +41,99 @@ const maybeReadFile = async (value: string | undefined) => {
   }
 };
 
-const parseJson = (value: string | undefined) => {
+const parseJson = (value: string | undefined): Metadata | undefined => {
   if (!value) return undefined;
-  return JSON.parse(value) as unknown;
+  const parsed = JSON.parse(value) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CliBlogError("Metadata must be a JSON object", { code: "invalid_metadata" });
+  }
+  return parsed as Metadata;
 };
 
 const flagNumber = (flags: ParsedArgs["flags"], key: string): number | undefined => {
+  if (flags[key] === true) {
+    throw new CliBlogError(`Missing --${key.replaceAll("_", "-")} value`, { code: "missing_flag_value", param: key });
+  }
   const value = flagString(flags, key);
   if (value === undefined) return undefined;
   const number = Number(value);
-  if (!Number.isFinite(number)) throw new CliBlogError(`Invalid --${key.replaceAll("_", "-")} number`, { code: "invalid_number" });
+  if (!Number.isFinite(number)) {
+    throw new CliBlogError(`Invalid --${key.replaceAll("_", "-")} number`, { code: "invalid_number", param: key });
+  }
   return number;
+};
+
+const integerFlag = (flags: ParsedArgs["flags"], key: string, min: number, max: number) => {
+  const value = flagNumber(flags, key);
+  if (value === undefined) return undefined;
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new CliBlogError(`--${key.replaceAll("_", "-")} must be an integer between ${min} and ${max}`, {
+      code: "validation_error",
+      param: key,
+    });
+  }
+  return value;
+};
+
+const flagLimit = (flags: ParsedArgs["flags"]) => {
+  const limit = flagNumber(flags, "limit");
+  if (limit === undefined) return undefined;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new CliBlogError("--limit must be an integer between 1 and 100", { code: "validation_error", param: "limit" });
+  }
+  return limit;
+};
+
+const hasFlag = (flags: ParsedArgs["flags"], key: string) => flags[key] !== undefined;
+
+const listPagination = (flags: ParsedArgs["flags"]) => {
+  const cursorMode = hasFlag(flags, "after") || hasFlag(flags, "limit");
+  const numberedMode = hasFlag(flags, "page") || hasFlag(flags, "per_page");
+
+  if (cursorMode && numberedMode) {
+    throw new CliBlogError("Do not combine --page/--per-page with --after/--limit", {
+      code: "pagination_mode_conflict",
+      param: hasFlag(flags, "page") ? "page" : "per_page",
+    });
+  }
+
+  if (hasFlag(flags, "per_page") && !hasFlag(flags, "page")) {
+    throw new CliBlogError("--per-page requires --page", { code: "validation_error", param: "per_page" });
+  }
+
+  if (numberedMode) {
+    return compact({
+      page: integerFlag(flags, "page", 1, 2147483647),
+      per_page: integerFlag(flags, "per_page", 1, 100),
+    });
+  }
+
+  return compact({
+    after: flagString(flags, "after"),
+    limit: flagLimit(flags),
+  });
+};
+
+const flagEnum = <T extends string>(flags: ParsedArgs["flags"], key: string, values: readonly T[]): T | undefined => {
+  const value = flagString(flags, key);
+  if (value === undefined) return undefined;
+  if (values.includes(value as T)) return value as T;
+  throw new CliBlogError(`Invalid --${key.replaceAll("_", "-")}. Expected one of: ${values.join(", ")}`, {
+    code: "invalid_option",
+  });
+};
+
+const flagEnumArray = <T extends string>(flags: ParsedArgs["flags"], key: string, values: readonly T[]): T[] | undefined => {
+  const items = flagArray(flags, key);
+  if (!items) return undefined;
+  for (const item of items) {
+    if (!values.includes(item as T)) {
+      throw new CliBlogError(`Invalid --${key.replaceAll("_", "-")} value ${item}. Expected: ${values.join(", ")}`, {
+        code: "invalid_option",
+      });
+    }
+  }
+  return items as T[];
 };
 
 const flagMaybeBoolean = (flags: ParsedArgs["flags"], key: string): boolean | undefined => {
@@ -68,6 +153,34 @@ const compact = <T extends Record<string, unknown>>(value: T) =>
   };
 
 const demoMode = (args: ParsedArgs) => flagBoolean(args.flags, "demo");
+
+const contentTypesByExtension: Record<string, string> = {
+  ".avif": "image/avif",
+  ".doc": "application/msword",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".gif": "image/gif",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".key": "application/vnd.apple.keynote",
+  ".mp4": "video/mp4",
+  ".pdf": "application/pdf",
+  ".png": "image/png",
+  ".ppt": "application/vnd.ms-powerpoint",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".svg": "image/svg+xml",
+  ".webm": "video/webm",
+  ".webp": "image/webp",
+};
+
+const mediaContentType = (path: string, args: ParsedArgs) => {
+  const explicit = flagString(args.flags, "content_type");
+  if (explicit) return explicit;
+  const inferred = contentTypesByExtension[extname(path).toLowerCase()];
+  if (inferred) return inferred;
+  throw new CliBlogError("Could not infer a supported media type. Pass --content-type explicitly.", {
+    code: "missing_content_type",
+  });
+};
 
 const clientFor = async (args: ParsedArgs, env: NodeJS.ProcessEnv = process.env) => {
   const saved = await readConfig();
@@ -136,7 +249,10 @@ const seoBody = (args: ParsedArgs): SeoFields =>
 
 async function postBody(args: ParsedArgs, options: { requireTitle: true }): Promise<CreatePostInput>;
 async function postBody(args: ParsedArgs, options?: { requireTitle?: false }): Promise<UpdatePostInput>;
-async function postBody(args: ParsedArgs, options: { requireTitle?: boolean } = {}) {
+async function postBody(
+  args: ParsedArgs,
+  options: { requireTitle?: boolean } = {},
+): Promise<CreatePostInput | UpdatePostInput> {
   const title = flagString(args.flags, "title");
   if (options.requireTitle && !title) {
     throw new CliBlogError("Missing required --title", { code: "missing_title" });
@@ -156,7 +272,8 @@ async function postBody(args: ParsedArgs, options: { requireTitle?: boolean } = 
     published_at: flagString(args.flags, "published_at"),
     scheduled_at: flagString(args.flags, "scheduled_at"),
     slug: flagString(args.flags, "slug"),
-    status: flagString(args.flags, "status") as CreatePostInput["status"] | undefined,
+    media_asset_ids: firstArrayFlag(args.flags, "media_asset_ids", "media_ids", "attachments"),
+    status: flagEnum(args.flags, "status", ["draft", "in_review", "scheduled", "published", "archived"] as const),
     tag_ids: firstArrayFlag(args.flags, "tag_ids", "tags"),
     title,
     translation_of_id: flagString(args.flags, "translation_of_id"),
@@ -165,7 +282,7 @@ async function postBody(args: ParsedArgs, options: { requireTitle?: boolean } = 
 
 function termBody(args: ParsedArgs, options: { requireName: true }): CreateTermInput;
 function termBody(args: ParsedArgs, options?: { requireName?: false }): UpdateTermInput;
-function termBody(args: ParsedArgs, options: { requireName?: boolean } = {}) {
+function termBody(args: ParsedArgs, options: { requireName?: boolean } = {}): CreateTermInput | UpdateTermInput {
   const name = flagString(args.flags, "name");
   if (options.requireName && !name) {
     throw new CliBlogError("Missing required --name", { code: "missing_name" });
@@ -188,6 +305,9 @@ const runConfig = async (args: ParsedArgs, env: NodeJS.ProcessEnv) => {
   const saved = await readConfig();
   const apiKey = flagString(args.flags, "api_key") ?? env.CLI_BLOG_API_KEY ?? saved.apiKey;
   const apiUrl = flagString(args.flags, "api_url") ?? env.CLI_BLOG_API_URL ?? saved.apiUrl;
+  if (!apiKey && !apiUrl) {
+    throw new CliBlogError("Pass --api-key or --api-url to save configuration", { code: "missing_config" });
+  }
   await writeConfig(compact({ apiKey, apiUrl }));
   return { api_key: apiKey ? maskKey(apiKey) : undefined, api_url: apiUrl, saved: true };
 };
@@ -200,7 +320,7 @@ const runPosts = async (args: ParsedArgs, client: CliBlog) => {
     if (!postId) throw new CliBlogError("Missing post ID or slug", { code: "missing_id" });
     if (revisionAction === "list") {
       return client.posts.revisions.list(postId, compact({
-        limit: flagNumber(args.flags, "limit") ?? 20,
+        ...listPagination(args.flags),
         locale: flagString(args.flags, "locale"),
       }));
     }
@@ -219,21 +339,30 @@ const runPosts = async (args: ParsedArgs, client: CliBlog) => {
   }
   if (action === "list") {
     return client.posts.list(compact({
+      ...listPagination(args.flags),
       author_id: firstArrayFlag(args.flags, "author_id", "author_ids"),
       author_slug: firstArrayFlag(args.flags, "author_slug", "author_slugs"),
+      author_match: flagEnum(args.flags, "author_match", ["any", "all"] as const) as RelationMatch | undefined,
       category_id: firstArrayFlag(args.flags, "category_id", "category_ids"),
       category_slug: firstArrayFlag(args.flags, "category_slug", "category_slugs"),
-      direction: flagString(args.flags, "direction") as PostListParams["direction"],
-      fields: flagArray(args.flags, "fields") as PostFieldGroup[] | undefined,
-      include: flagArray(args.flags, "include") as PostInclude[] | undefined,
+      category_match: flagEnum(args.flags, "category_match", ["any", "all"] as const),
+      direction: flagEnum(args.flags, "direction", ["asc", "desc"] as const),
+      exclude_author_id: firstArrayFlag(args.flags, "exclude_author_id", "exclude_author_ids"),
+      exclude_author_slug: firstArrayFlag(args.flags, "exclude_author_slug", "exclude_author_slugs"),
+      exclude_category_id: firstArrayFlag(args.flags, "exclude_category_id", "exclude_category_ids"),
+      exclude_category_slug: firstArrayFlag(args.flags, "exclude_category_slug", "exclude_category_slugs"),
+      exclude_tag_id: firstArrayFlag(args.flags, "exclude_tag_id", "exclude_tag_ids"),
+      exclude_tag_slug: firstArrayFlag(args.flags, "exclude_tag_slug", "exclude_tag_slugs"),
+      fields: flagEnumArray(args.flags, "fields", ["summary", "content", "seo", "workflow", "metadata"] as const) as PostFieldGroup[] | undefined,
+      include: flagEnumArray(args.flags, "include", ["authors", "categories", "tags", "media", "translations"] as const) as PostInclude[] | undefined,
       is_featured: flagMaybeBoolean(args.flags, "is_featured"),
-      limit: flagNumber(args.flags, "limit") ?? 20,
       locale: flagString(args.flags, "locale"),
       search: flagString(args.flags, "search"),
-      sort: flagString(args.flags, "sort") as PostListParams["sort"],
-      status: flagString(args.flags, "status") as PostListParams["status"],
+      sort: flagEnum(args.flags, "sort", ["published_at", "created_at", "updated_at", "relevance"] as const) as PostListParams["sort"],
+      status: flagEnum(args.flags, "status", ["draft", "in_review", "scheduled", "published", "archived"] as const) as PostListParams["status"],
       tag_id: firstArrayFlag(args.flags, "tag_id", "tag_ids"),
       tag_slug: firstArrayFlag(args.flags, "tag_slug", "tag_slugs"),
+      tag_match: flagEnum(args.flags, "tag_match", ["any", "all"] as const),
     }));
   }
   if (action === "get") return client.posts.get(idArg(args), compact({ fields: flagArray(args.flags, "fields") as PostGetParams["fields"], include: flagArray(args.flags, "include") as PostGetParams["include"], locale: flagString(args.flags, "locale") }));
@@ -268,14 +397,17 @@ const runPosts = async (args: ParsedArgs, client: CliBlog) => {
 
 const runAuthors = async (args: ParsedArgs, client: CliBlog) => {
   const action = args.command[1];
-  if (action === "list") return client.authors.list({ limit: Number(flagString(args.flags, "limit") ?? 20) });
+  if (action === "list") return client.authors.list(listPagination(args.flags));
   if (action === "get") return client.authors.get(idArg(args));
   if (action === "create") {
+    const publicName = flagString(args.flags, "public_name") ?? flagString(args.flags, "name");
+    if (!publicName) throw new CliBlogError("Missing required --public-name", { code: "missing_public_name" });
     return client.authors.create(compact({
       avatar_media_id: flagString(args.flags, "avatar_media_id"),
       bio: flagString(args.flags, "bio"),
       metadata: parseJson(flagString(args.flags, "metadata")),
-      public_name: flagString(args.flags, "public_name") ?? flagString(args.flags, "name") ?? "",
+      member_id: flagString(args.flags, "member_id"),
+      public_name: publicName,
       slug: flagString(args.flags, "slug"),
       website_url: flagString(args.flags, "website_url"),
     }));
@@ -285,6 +417,7 @@ const runAuthors = async (args: ParsedArgs, client: CliBlog) => {
       avatar_media_id: flagString(args.flags, "avatar_media_id"),
       bio: flagString(args.flags, "bio"),
       metadata: parseJson(flagString(args.flags, "metadata")),
+      member_id: flagString(args.flags, "member_id"),
       public_name: flagString(args.flags, "public_name") ?? flagString(args.flags, "name"),
       slug: flagString(args.flags, "slug"),
       website_url: flagString(args.flags, "website_url"),
@@ -299,23 +432,23 @@ const runAuthors = async (args: ParsedArgs, client: CliBlog) => {
 
 const runMedia = async (args: ParsedArgs, client: CliBlog) => {
   const action = args.command[1];
-  if (action === "list") return client.media.list({ limit: Number(flagString(args.flags, "limit") ?? 20) });
+  if (action === "list") return client.media.list(listPagination(args.flags));
   if (action === "get") return client.media.get(idArg(args));
   if (action === "upload") {
     const path = flagString(args.flags, "file") ?? args.command[2];
     if (!path) throw new CliBlogError("Missing --file path", { code: "missing_file" });
     const bytes = await readFile(path);
     return client.media.upload(compact({
-      alt_text: flagString(args.flags, "alt_text"),
+      alt_text: firstStringFlag(args.flags, "alt_text", "alt"),
       caption: flagString(args.flags, "caption"),
-      file: new Blob([bytes], { type: flagString(args.flags, "content_type") ?? "application/octet-stream" }),
-      filename: flagString(args.flags, "filename") ?? path.split("/").at(-1),
+      file: new Blob([bytes], { type: mediaContentType(path, args) }),
+      filename: flagString(args.flags, "filename") ?? basename(path),
       metadata: parseJson(flagString(args.flags, "metadata")),
     }));
   }
   if (action === "update") {
     return client.media.update(idArg(args), compact({
-      alt_text: flagString(args.flags, "alt_text"),
+      alt_text: firstStringFlag(args.flags, "alt_text", "alt"),
       caption: flagString(args.flags, "caption"),
       metadata: parseJson(flagString(args.flags, "metadata")),
     }));
@@ -330,8 +463,8 @@ const runMedia = async (args: ParsedArgs, client: CliBlog) => {
 const runTaxonomy = async (args: ParsedArgs, client: CliBlog, kind: "categories" | "tags") => {
   const resource = client[kind];
   const action = args.command[1];
-  if (action === "list") return resource.list(compact({ include: flagArray(args.flags, "include") as TermInclude[] | undefined, limit: Number(flagString(args.flags, "limit") ?? 20), locale: flagString(args.flags, "locale") }));
-  if (action === "get") return resource.get(idArg(args), compact({ include: flagArray(args.flags, "include"), locale: flagString(args.flags, "locale") }));
+  if (action === "list") return resource.list(compact({ ...listPagination(args.flags), include: flagEnumArray(args.flags, "include", ["translations"] as const) as TermInclude[] | undefined, locale: flagString(args.flags, "locale") }));
+  if (action === "get") return resource.get(idArg(args), compact({ include: flagEnumArray(args.flags, "include", ["translations"] as const), locale: flagString(args.flags, "locale") }));
   if (action === "create") return resource.create(termBody(args, { requireName: true }));
   if (action === "update") return resource.update(idArg(args), termBody(args), compact({ locale: flagString(args.flags, "locale") }));
   if (action === "delete") {
@@ -387,9 +520,22 @@ export const runAndPrint = async (argv: string[], env: NodeJS.ProcessEnv = proce
     print(result, { json: flagBoolean(args.flags, "json") });
     return 0;
   } catch (error) {
-    const status = error instanceof CliBlogError && error.status ? ` (${error.status})` : "";
     const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`cli-blog: ${message}${status}\n`);
+    if (flagBoolean(args.flags, "json")) {
+      const detail = error instanceof CliBlogError ? error : undefined;
+      process.stderr.write(`${JSON.stringify({
+        error: {
+          code: detail?.code ?? "command_failed",
+          message,
+          param: detail?.param,
+          request_id: detail?.requestId,
+          status: detail?.status,
+        },
+      })}\n`);
+    } else {
+      const status = error instanceof CliBlogError && error.status ? ` (${error.status})` : "";
+      process.stderr.write(`cli-blog: ${message}${status}\n`);
+    }
     return 1;
   }
 };
