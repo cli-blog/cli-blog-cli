@@ -118,10 +118,12 @@ Global options work on every command:
 | `posts list` | List posts. | `--status`, `--locale`, `--limit`, `--after`, `--page`, `--per-page`, `--search`, `--sort`, `--direction`, `--fields`, `--include`, author/category/tag filters. |
 | `posts get <id-or-slug>` | Fetch one post. | `--locale`, `--fields`, `--include`. |
 | `posts create` | Create a post. | `--title`, `--body`, `--body-markdown`, `--status`, `--locale`, author/category/tag/media IDs, SEO options. |
-| `posts update <id-or-slug>` | Update a post. | Same editable fields as create, plus `--expected-version`. |
-| `posts publish <id-or-slug>` | Publish a post. | `--expected-version`, `--published-at`, `--locale`. |
+| `posts update <id-or-slug>` | Update a post, including direct status changes. | Same editable fields as create, plus `--expected-version`. |
+| `posts publish <id-or-slug>` | Convenience shortcut for setting `--status published`. | `--expected-version`, `--published-at`, `--locale`. |
 | `posts schedule <id-or-slug>` | Schedule a post. | `--scheduled-at` or `--at`, `--expected-version`, `--locale`. |
 | `posts delete <id-or-slug>` | Delete/archive a post. | `--locale`, `--yes`. |
+
+Post workflow is status-based. `posts create` defaults to draft when `--status` is omitted. Use `--status published` or `--status scheduled` on create/update when you want to set the state directly; `posts publish` and `posts schedule` are shortcuts for the common cases.
 
 List posts:
 
@@ -174,6 +176,18 @@ cli-blog posts create \
   --json
 
 cli-blog posts publish post_123 --expected-version 1 --json
+```
+
+The publish command is optional convenience. These direct status forms use the same underlying API model:
+
+```sh
+cli-blog posts update post_123 --status published --expected-version 1 --json
+
+cli-blog posts create \
+  --title "Launch notes" \
+  --body "Published immediately." \
+  --status published \
+  --json
 ```
 
 Expected publish result shape:
